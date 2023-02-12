@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, json
 from flask_mysqldb import MySQL
 
 from config import config
@@ -9,7 +9,7 @@ conexion=MySQL(app)
 
 
 @app.route('/patients', methods=['GET'])
-def users_database()->jsonify:
+def users_database()->dict:
     """Muestra los datos que estan en la tabla "patient" de la base de datos
 
     Returns:
@@ -32,14 +32,14 @@ def users_database()->jsonify:
         return jsonify({'mensaje': 'Error'})
 
 @app.route('/patients/<id_patient>', methods=['GET'])
-def search_patient(id_patient:int)->jsonify:
+def search_patient(id_patient:int)->dict:
     """Muestra los datos de guardados en la base de datos de un usuario en especifico
 
     Args:
         id_patient (int): id del paciente que se busca en la base de datos
 
     Returns:
-        jsonify: retorna un json que contiene la información almacenada en la base de datos
+        dict: retorna un json que contiene la información almacenada en la base de datos
     """
     
     try:
@@ -57,11 +57,11 @@ def search_patient(id_patient:int)->jsonify:
         return jsonify({'mensaje': 'Error'})
 
 @app.route('/patients', methods=['POST'])
-def insert_data()->jsonify:
+def insert_data()->dict:
     """inserta en la base de datos en nombre del usuario y el resultado del test
 
     Returns:
-        jsonify: returna un json con la información que se insertó en la base de datos
+        dict: returna un json con la información que se insertó en la base de datos
     """
     def value_question(position:int , answer: str)->int:
         """Determina que valor tiene cada pregunta
@@ -102,6 +102,7 @@ def insert_data()->jsonify:
     dictionary_return ['user']= request.json['user']
     answers = request.json['answers'].copy()
     sumatory = 0
+    
     for answer in answers:
         sumatory += value_question(int(answer), answers[answer].upper())
     
@@ -125,36 +126,41 @@ def insert_data()->jsonify:
         return jsonify({'mensaje': 'Error al ingresar el dato a la base de datos'})
 
 @app.route('/patients/<id_patient>', methods=['DELETE'])
-def delete_patient(id_patient:int)->jsonify:
+def delete_patient(id_patient:int)->dict:
     """Elimina un usuario de la base de datos
 
     Args:
         id_patient (int): id del usuario de la base de datos que se desea eliminar
 
     Returns:
-        jsonify: un json con el id del paciente que se eliminó de la base de datos
+        dict: un json con el id del paciente que se eliminó de la base de datos
     """
+    
+    patient = search_patient(id_patient)
+    patient_dict = json.loads(patient.get_data())
+    
     try:
         cursor = conexion.connection.cursor()
         sql = f"DELETE FROM patient WHERE id_patient = {id_patient}"
         cursor.execute(sql)
         conexion.connection.commit()
         
-        return jsonify({'identificador paciente eliminado': id_patient})
+        return jsonify({'información del paciente eliminado': patient_dict['usuario']})
     except:
         return jsonify({'mensaje': 'Error al eliminar al paciente de la base de datos'})
 
 @app.route('/patients/<id_patient>', methods=['PUT'])
-def update_patient(id_patient:int)->jsonify:
+def update_patient(id_patient:int)->dict:
     """Actualiza un registro en la base de datos, y en un json debe recibir la información nueva que tendra ese paciente
 
     Args:
         id_patient (int): id del usuario de la base de datos que se desea actualizar
 
     Returns:
-        jsonify: un json con el id del paciente que se actualizó de la base de datos
+        dict: un json con la información que se actualizará de la base de datos, la nueva información y el id del paciente
     """
-    
+    patient = search_patient(id_patient)
+    patient_dict = json.loads(patient.get_data())
     
     try:
         result = int(request.json['result'])
@@ -166,11 +172,13 @@ def update_patient(id_patient:int)->jsonify:
         cursor.execute(sql)
         conexion.connection.commit()
         
-        return jsonify({'identificador paciente actualizado': id_patient})
+        return jsonify({'información que se actualizo': patient_dict['usuario'],
+                        'id paciente': id_patient,
+                        'nueva información': request.json})
     except:
         return jsonify({'mensaje': 'Error al actualizar la base de datos'})
 
-def page_not_found(error):
+def page_not_found(error:int)->str:
     """Si la página de la URL no existe envia un mensaje advirtiendo
 
     Args:
