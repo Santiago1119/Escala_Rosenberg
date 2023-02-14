@@ -8,6 +8,10 @@ app=Flask(__name__)
 conexion=MySQL(app)
 
 
+@app.route('/')
+def home()->str:
+    return "HOLA"
+
 @app.route('/patients', methods=['GET'])
 def users_database()->dict:
     """Muestra los datos que estan en la tabla "patient" de la base de datos
@@ -23,13 +27,13 @@ def users_database()->dict:
         usuarios = []
         
         for fila in datos:
-            usuario = {'id_usuario': fila[0], 'nombre_usuario': fila[1], 'resultado_test': fila[2]}
+            usuario = {'id_patient': fila[0], 'name_patient': fila[1], 'result_test': fila[2]}
             usuarios.append(usuario)
             
-        return jsonify({'usuarios': usuarios})
+        return jsonify({'users': usuarios})
     
     except Exception as ex:
-        return jsonify({'mensaje': 'Error'})
+        return jsonify({'message': 'Error'})
 
 @app.route('/patients/<id_patient>', methods=['GET'])
 def search_patient(id_patient:int)->dict:
@@ -48,13 +52,13 @@ def search_patient(id_patient:int)->dict:
         cursor.execute(sql)
         datos = cursor.fetchone()
         if datos != None:
-            usuario = {'id_usuario': datos[0], 'nombre_usuario': datos[1], 'resultado_test': datos[2]}
-            return jsonify({'usuario': usuario, 'mensaje': 'Paciente encontrado'})
+            usuario = {'id_patient': datos[0], 'name_patient': datos[1], 'result_test': datos[2]}
+            return jsonify({'patient': usuario, 'message': 'Paciente encontrado'})
         else:
-            return jsonify({'mensaje': 'Paciente no encontrado'})
+            return jsonify({'message': 'Paciente no encontrado'})
     
     except Exception as ex:
-        return jsonify({'mensaje': 'Error'})
+        return jsonify({'message': 'Error'})
 
 @app.route('/patients', methods=['POST'])
 def insert_data()->dict:
@@ -107,23 +111,25 @@ def insert_data()->dict:
         sumatory += value_question(int(answer), answers[answer].upper())
     
     if sumatory >= 30 and sumatory <= 40:
-        dictionary_return['resultado'] = 1
+        dictionary_return['result'] = 1
     
     if sumatory >= 26 and sumatory < 30:
-        dictionary_return['resultado'] = 2
+        dictionary_return['result'] = 2
         
     if sumatory > 0 and sumatory <= 25:
-        dictionary_return['resultado'] = 3
+        dictionary_return['result'] = 3
+    
+    print(dictionary_return)
     
     try:
         cursor = conexion.connection.cursor()
-        sql = f"""INSERT INTO patient (name, id_resultado) VALUES ('{dictionary_return['user']}', {dictionary_return['resultado']})"""
+        sql = f"""INSERT INTO patient (name, id_result) VALUES ('{dictionary_return['user']}', {dictionary_return['result']})"""
         cursor.execute(sql)
         conexion.connection.commit()
         
-        return jsonify({'datos_ingresados': dictionary_return, 'mensaje': 'Se agregaron esos datos a la base de datos'})
+        return jsonify({'input_data': dictionary_return, 'message': 'Se agregaron esos datos a la base de datos'})
     except:
-        return jsonify({'mensaje': 'Error al ingresar el dato a la base de datos'})
+        return jsonify({'message': 'Error al ingresar el dato a la base de datos'})
 
 @app.route('/patients/<id_patient>', methods=['DELETE'])
 def delete_patient(id_patient:int)->dict:
@@ -167,7 +173,7 @@ def update_patient(id_patient:int)->dict:
         name = request.json['name']
         
         cursor = conexion.connection.cursor()
-        sql = f"""UPDATE patient SET name = '{name}', id_resultado = {result} 
+        sql = f"""UPDATE patient SET name = '{name}', id_result = {result} 
                 WHERE id_patient = {id_patient}"""
         cursor.execute(sql)
         conexion.connection.commit()
